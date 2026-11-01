@@ -1,0 +1,28 @@
+:root {
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --accent: #3b5bdb;
+  --muted: #e9ecef;
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16181d;
+    --fg: #e9ecef;
+    --accent: #748ffc;
+    --muted: #2c2f36;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--fg);
+}

@@ -1,0 +1,32 @@
+.app {
+  display: grid;
+  place-items: center;
+  gap: 1rem;
+  padding: 4rem 1rem;
+}
+
+.count {
+  margin: 0;
+  font-size: 3rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.actions button {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--muted);
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.actions button:hover {
+  background: var(--accent);
+  color: var(--bg);
+}
