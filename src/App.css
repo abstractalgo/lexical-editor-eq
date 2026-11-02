@@ -79,8 +79,14 @@ kbd {
   font-family: var(--mono);
 }
 
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
 .binding__remove,
-.add {
+.add,
+.reset {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
@@ -108,9 +114,26 @@ kbd {
 }
 
 .add {
-  justify-self: start;
-  padding: 7px 14px;
+  padding: 6px 12px;
+  font-size: 14px;
   font-weight: 500;
+}
+
+.reset {
+  align-self: center;
+  margin-left: auto;
+  padding: 2px 6px;
+  border: 0;
+  background: transparent;
+  color: var(--muted-fg);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.reset:hover {
+  background: transparent;
+  color: var(--fg);
+  text-decoration: underline;
 }
 
 .add:hover {

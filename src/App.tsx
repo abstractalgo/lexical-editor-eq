@@ -7,7 +7,9 @@ import "./App.css";
 
 export function App() {
   const bindings = useAppStore((s) => s.bindings);
+  const revision = useAppStore((s) => s.revision);
   const addBinding = useAppStore((s) => s.addBinding);
+  const reset = useAppStore((s) => s.reset);
 
   return (
     <main className="app">
@@ -22,12 +24,17 @@ export function App() {
 
       <ol className="bindings">
         {bindings.map((binding, index) => (
-          <BindingRow key={binding.id} binding={binding} index={index} />
+          <BindingRow key={`${revision}:${binding.id}`} binding={binding} index={index} />
         ))}
       </ol>
-      <button type="button" className="add" onClick={addBinding}>
-        Add variable
-      </button>
+      <div className="actions">
+        <button type="button" className="add" onClick={addBinding}>
+          Add variable
+        </button>
+        <button type="button" className="reset" onClick={reset}>
+          Reset to example
+        </button>
+      </div>
 
       <section className="output">
         <h2>Output</h2>
