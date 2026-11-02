@@ -1,7 +1,13 @@
 import { useMemo } from "react";
 import { useAppStore, type Binding } from "./appStore.ts";
 import { demoSchema } from "./demoSchema.ts";
-import { ExpressionEditor, formatType, type ExpressionSchema } from "./expression/index.ts";
+import {
+  ExpressionEditor,
+  formatType,
+  type ExprPath,
+  type ExpressionSchema,
+} from "./expression/index.ts";
+import { JsonView } from "./JsonView.tsx";
 import { bindingsInScope, nameError } from "./scope.ts";
 import "./App.css";
 
@@ -36,18 +42,47 @@ export function App() {
         </button>
       </div>
 
-      <section className="output">
-        <h2>Output</h2>
-        <pre>
-          {JSON.stringify(
-            bindings.map((b) => ({ name: b.name, expr: b.result?.expr ?? null })),
-            null,
-            2,
-          )}
-        </pre>
-      </section>
+      <Output />
     </main>
   );
+}
+
+/** JSON of the row that last had the caret, with the caret's node highlighted. */
+function Output() {
+  const active = useAppStore((s) => s.active);
+  const binding = useAppStore((s) => s.bindings.find((b) => b.id === s.active?.id));
+
+  if (!active || !binding) {
+    return (
+      <section className="output">
+        <h2>Output</h2>
+        <p className="hint">Put the caret in an expression to inspect its output.</p>
+      </section>
+    );
+  }
+
+  const { caret } = active;
+  return (
+    <section className="output">
+      <h2>
+        Output <span className="output__name">{binding.name}</span>
+        <code className="output__path">{formatPath(caret.path)}</code>
+      </h2>
+      <JsonView
+        value={binding.result?.expr ?? null}
+        highlight={caret.path}
+        caretOffset={caret.offset}
+      />
+    </section>
+  );
+}
+
+/** `["parts", 3, "args", 0]` → `parts[3].args[0]`; the root is `(root)`. */
+function formatPath(path: ExprPath): string {
+  if (path.length === 0) return "(root)";
+  return path
+    .map((key, i) => (typeof key === "number" ? `[${key}]` : i === 0 ? key : `.${key}`))
+    .join("");
 }
 
 function BindingRow({ binding, index }: { binding: Binding; index: number }) {
@@ -55,13 +90,15 @@ function BindingRow({ binding, index }: { binding: Binding; index: number }) {
   const renameBinding = useAppStore((s) => s.renameBinding);
   const removeBinding = useAppStore((s) => s.removeBinding);
   const setResult = useAppStore((s) => s.setResult);
+  const setCaret = useAppStore((s) => s.setCaret);
+  const isActive = useAppStore((s) => s.active?.id === binding.id);
 
   const schema = useScopedSchema(demoSchema, bindingsInScope(bindings, index, demoSchema));
   const error = nameError(bindings, index, demoSchema);
   const { result } = binding;
 
   return (
-    <li className="binding">
+    <li className="binding" data-active={isActive || undefined}>
       <div className="binding__row">
         <input
           className="binding__name"
@@ -78,6 +115,7 @@ function BindingRow({ binding, index }: { binding: Binding; index: number }) {
             schema={schema}
             initialValue={binding.initialValue}
             onChange={(next) => setResult(binding.id, next)}
+            onCaretChange={(caret) => setCaret(binding.id, caret)}
           />
         </div>
         <button

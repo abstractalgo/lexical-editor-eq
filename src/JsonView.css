@@ -1,0 +1,65 @@
+.json {
+  max-height: 60vh;
+  margin: 0;
+  padding: 10px 0;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  font: 12px/1.6 var(--mono);
+}
+
+.json__line {
+  padding: 0 14px;
+  border-left: 3px solid transparent;
+  white-space: pre;
+}
+
+.json__line[data-hit] {
+  border-left-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.json__key {
+  color: #2449b8;
+}
+
+.json__string {
+  color: #1f7a3d;
+}
+
+.json__number,
+.json__boolean {
+  color: #b5451b;
+}
+
+.json__null {
+  color: var(--muted-fg);
+  font-style: italic;
+}
+
+.json__punct {
+  color: var(--muted-fg);
+}
+
+.json__caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.15em;
+  margin: 0 -1px;
+  vertical-align: text-bottom;
+  background: var(--accent);
+  animation: json-caret-blink 1s steps(1) infinite;
+}
+
+@keyframes json-caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .json__caret {
+    animation: none;
+  }
+}

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
 import { demoBindings } from "./demoSchema.ts";
-import type { Expr, ExpressionResult } from "./expression/index.ts";
+import type { CaretLocation, Expr, ExpressionResult } from "./expression/index.ts";
 
 export interface Binding {
   id: string;
@@ -19,6 +19,9 @@ interface AppState {
    * their editors load the new values (editors read `initialValue` once).
    */
   revision: number;
+  /** Row whose editor last had the caret, and where the caret was (not saved). */
+  active: { id: string; caret: CaretLocation } | null;
+  setCaret: (id: string, caret: CaretLocation | null) => void;
   addBinding: () => void;
   removeBinding: (id: string) => void;
   renameBinding: (id: string, name: string) => void;
@@ -105,6 +108,15 @@ export const useAppStore = create<AppState>()(
     (set) => ({
       bindings: demoState(),
       revision: 0,
+      active: null,
+      setCaret: (id, caret) =>
+        set((s) => {
+          // Ignore editors losing the caret: keep showing the last position.
+          if (!caret) return s;
+          if (s.active?.id === id && JSON.stringify(s.active.caret) === JSON.stringify(caret))
+            return s;
+          return { active: { id, caret } };
+        }),
       addBinding: () =>
         set((s) => ({
           bindings: [...s.bindings, newBinding(`var${s.bindings.length + 1}`, null)],

@@ -4,8 +4,11 @@ import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
+import { mergeRegister } from "@lexical/utils";
+import type { LexicalEditor, NodeKey } from "lexical";
 import { useEffect, useEffectEvent, useState } from "react";
-import { $analyzeEditor, $loadExpression } from "./ast.ts";
+import { $analyzeEditor, $loadExpression, type NodeLocation } from "./ast.ts";
+import { $caretLocation } from "./caret.ts";
 import { ArgNode } from "./nodes/ArgNode.ts";
 import { CallNode } from "./nodes/CallNode.tsx";
 import { EnumNode } from "./nodes/EnumNode.tsx";
@@ -14,7 +17,7 @@ import { InsertMenuPlugin } from "./plugins/InsertMenuPlugin.tsx";
 import { KeyboardPlugin } from "./plugins/KeyboardPlugin.tsx";
 import { NavigationPlugin } from "./plugins/NavigationPlugin.tsx";
 import { createEditorStore, EditorStoreContext, useEditorStore } from "./store.ts";
-import type { Expr, ExprType, ExpressionResult, ExpressionSchema } from "./types.ts";
+import type { CaretLocation, Expr, ExprType, ExpressionResult, ExpressionSchema } from "./types.ts";
 import "./ExpressionEditor.css";
 
 export interface ExpressionEditorProps {
@@ -24,6 +27,8 @@ export interface ExpressionEditorProps {
   /** Read once on mount. */
   initialValue?: Expr | null;
   onChange?: (result: ExpressionResult) => void;
+  /** Called on selection changes while the editor has focus. */
+  onCaretChange?: (caret: CaretLocation | null) => void;
   placeholder?: string;
 }
 
@@ -32,6 +37,7 @@ export function ExpressionEditor({
   resultType = "any",
   initialValue = null,
   onChange,
+  onCaretChange,
   placeholder = "Type text, or @ to insert a variable or transformation",
 }: ExpressionEditorProps) {
   const [store] = useState(() => createEditorStore(schema, resultType));
@@ -58,7 +64,7 @@ export function ExpressionEditor({
         <KeyboardPlugin />
         <NavigationPlugin />
         <InsertMenuPlugin />
-        <AnalysisPlugin onChange={onChange} />
+        <AnalysisPlugin onChange={onChange} onCaretChange={onCaretChange} />
       </LexicalComposer>
     </EditorStoreContext.Provider>
   );
@@ -82,24 +88,70 @@ function EditorFrame({ placeholder }: { placeholder: string }) {
   );
 }
 
-/** Re-analyses on every change: publishes diagnostics to the nodes and the result to the parent. */
-function AnalysisPlugin({ onChange }: { onChange?: (result: ExpressionResult) => void }) {
+/** The editor the user last pressed or focused in, across all editor instances. */
+let lastInteracted: LexicalEditor | null = null;
+
+/**
+ * Re-analyses on every change: publishes diagnostics to the nodes and the
+ * result to the parent. On every update in the active editor, also reports
+ * where the caret is in terms of the result.
+ */
+function AnalysisPlugin({
+  onChange,
+  onCaretChange,
+}: {
+  onChange?: (result: ExpressionResult) => void;
+  onCaretChange?: (caret: CaretLocation | null) => void;
+}) {
   const [editor] = useLexicalComposerContext();
   const setDiagnostics = useEditorStore((s) => s.setDiagnostics);
   const schema = useEditorStore((s) => s.schema);
   const resultType = useEditorStore((s) => s.resultType);
   const emitChange = useEffectEvent((result: ExpressionResult) => onChange?.(result));
+  const emitCaret = useEffectEvent((caret: CaretLocation | null) => onCaretChange?.(caret));
 
   useEffect(() => {
-    const run = () => {
-      const { diagnostics, ...result } = editor.read(() => $analyzeEditor(schema, resultType));
+    let locations: ReadonlyMap<NodeKey, NodeLocation> = new Map();
+    const analyse = () => {
+      const {
+        diagnostics,
+        locations: next,
+        ...result
+      } = editor.read(() => $analyzeEditor(schema, resultType));
+      locations = next;
       setDiagnostics(diagnostics);
       emitChange(result);
     };
-    run();
-    return editor.registerUpdateListener(({ dirtyElements, dirtyLeaves }) => {
-      if (dirtyElements.size > 0 || dirtyLeaves.size > 0) run();
-    });
+    const reportCaret = () => {
+      // Only the editor the user is working in reports, so re-analysis in
+      // other editors (e.g. after a scope change) doesn't claim the caret.
+      const root = editor.getRootElement();
+      if (!root?.contains(document.activeElement) && lastInteracted !== editor) return;
+      emitCaret(editor.read(() => $caretLocation(locations)));
+    };
+    // Clicking chrome such as a call's name selects the node without moving
+    // DOM focus (its mousedown is prevented), so pointer and focus events also
+    // mark this editor as the active one.
+    const claim = () => {
+      lastInteracted = editor;
+      requestAnimationFrame(reportCaret);
+    };
+    analyse();
+    return mergeRegister(
+      editor.registerUpdateListener(({ dirtyElements, dirtyLeaves }) => {
+        if (dirtyElements.size > 0 || dirtyLeaves.size > 0) analyse();
+        reportCaret();
+      }),
+      editor.registerRootListener((root, previous) => {
+        previous?.removeEventListener("pointerdown", claim, true);
+        previous?.removeEventListener("focusin", claim, true);
+        root?.addEventListener("pointerdown", claim, true);
+        root?.addEventListener("focusin", claim, true);
+      }),
+      () => {
+        if (lastInteracted === editor) lastInteracted = null;
+      },
+    );
   }, [editor, schema, resultType, setDiagnostics]);
 
   return null;

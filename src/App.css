@@ -163,14 +163,28 @@ kbd {
   color: var(--danger);
 }
 
-.output pre {
-  margin: 0;
-  padding: 12px;
-  overflow-x: auto;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  font-size: 12px;
+/* The row shown in Output. */
+.binding[data-active] .binding__eq {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.output h2 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.output__name {
+  font: 600 13px var(--mono);
+  color: var(--fg);
+}
+
+.output__path {
+  margin-left: auto;
+  color: var(--muted-fg);
+  font: 400 12px var(--mono);
 }
 
 @media (max-width: 640px) {

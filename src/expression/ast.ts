@@ -7,36 +7,55 @@ import {
   $isTextNode,
   type ElementNode,
   type LexicalNode,
+  type NodeKey,
 } from "lexical";
 import { $createCallNode, $isCallNode, type CallNode } from "./nodes/CallNode.tsx";
 import { $createEnumNode, $isEnumNode } from "./nodes/EnumNode.tsx";
 import { $createVariableNode, $isVariableNode } from "./nodes/VariableNode.tsx";
 import { formatType, isAssignable } from "./typeUtils.ts";
-import type { Expr, ExprType, ExpressionResult, ExpressionSchema } from "./types.ts";
+import type { Expr, ExprPath, ExprType, ExpressionResult, ExpressionSchema } from "./types.ts";
 
-type Segment = { text: string } | { expr: Expr; type: ExprType };
+/** A run of text (possibly several text nodes) or one pill/call node. */
+type RawSegment =
+  | { text: string; nodes: { node: LexicalNode; start: number }[] }
+  | { node: LexicalNode };
+
+/** Where a Lexical node ends up in the output: its JSON path, and for text its offset in the literal. */
+export interface NodeLocation {
+  path: ExprPath;
+  textStart?: number;
+}
 
 interface Analysis {
   schema: ExpressionSchema;
   /** Error message keyed by node key, `${callKey}/${argIndex}`, or "root". */
   diagnostics: Record<string, string>;
+  locations: Map<NodeKey, NodeLocation>;
 }
 
 /** Reads the editor content into an AST and type-checks it against `resultType`. */
 export function $analyzeEditor(
   schema: ExpressionSchema,
   resultType: ExprType,
-): ExpressionResult & { diagnostics: Record<string, string> } {
-  const analysis: Analysis = { schema, diagnostics: {} };
-  const inline = $getRoot()
-    .getChildren()
-    .flatMap((block) => ($isElementNode(block) ? block.getChildren() : [block]));
-  const { expr, type } = analyzeSequence(inline, resultType, analysis, "root", "Expression");
+): ExpressionResult & {
+  diagnostics: Record<string, string>;
+  locations: Map<NodeKey, NodeLocation>;
+} {
+  const analysis: Analysis = { schema, diagnostics: {}, locations: new Map() };
+  const root = $getRoot();
+  analysis.locations.set(root.getKey(), { path: [] });
+  const inline = root.getChildren().flatMap((block) => {
+    if (!$isElementNode(block)) return [block];
+    analysis.locations.set(block.getKey(), { path: [] });
+    return block.getChildren();
+  });
+  const { expr, type } = analyzeSequence(inline, resultType, analysis, "root", "Expression", []);
   return {
     expr,
     type,
     errors: Object.values(analysis.diagnostics),
     diagnostics: analysis.diagnostics,
+    locations: analysis.locations,
   };
 }
 
@@ -46,32 +65,37 @@ function analyzeSequence(
   analysis: Analysis,
   ownerKey: string,
   label: string,
+  path: ExprPath,
 ): { expr: Expr | null; type: ExprType | null } {
-  const segments: Segment[] = [];
-  const pushText = (text: string) => {
-    const last = segments.at(-1);
-    if (last && "text" in last) last.text += text;
-    else segments.push({ text });
-  };
-
+  const raw: RawSegment[] = [];
   for (const node of nodes) {
-    if ($isTextNode(node)) pushText(node.getTextContent());
-    else if ($isLineBreakNode(node)) pushText(" ");
-    else if ($isVariableNode(node)) {
-      const def = analysis.schema.variables.find((v) => v.path === node.getPath());
-      if (!def) analysis.diagnostics[node.getKey()] = `Unknown variable [${node.getPath()}]`;
-      segments.push({ expr: { kind: "variable", path: node.getPath() }, type: def?.type ?? "any" });
-    } else if ($isEnumNode(node)) {
-      segments.push(
-        node.getEnum() === "boolean"
-          ? { expr: { kind: "boolean", value: node.getValue() === "true" }, type: "boolean" }
-          : {
-              expr: { kind: "enum", enum: node.getEnum(), value: node.getValue() },
-              type: { enum: node.getEnum() },
-            },
-      );
-    } else if ($isCallNode(node)) segments.push(analyzeCall(node, analysis));
+    const text = $isTextNode(node) ? node.getTextContent() : $isLineBreakNode(node) ? " " : null;
+    if (text === null) {
+      raw.push({ node });
+      continue;
+    }
+    const last = raw.at(-1);
+    if (last && "text" in last) {
+      last.nodes.push({ node, start: last.text.length });
+      last.text += text;
+    } else {
+      raw.push({ text, nodes: [{ node, start: 0 }] });
+    }
   }
+
+  // A lone segment is the sequence itself; several become `parts` of a concat.
+  const segmentPath = (i: number): ExprPath => (raw.length === 1 ? path : [...path, "parts", i]);
+  const segments = raw.map((segment, i): { text: string } | { expr: Expr; type: ExprType } => {
+    const at = segmentPath(i);
+    if ("text" in segment) {
+      for (const { node, start } of segment.nodes) {
+        analysis.locations.set(node.getKey(), { path: at, textStart: start });
+      }
+      return { text: segment.text };
+    }
+    analysis.locations.set(segment.node.getKey(), { path: at });
+    return analyzeAtom(segment.node, analysis, at);
+  });
 
   const report = (message: string) => {
     analysis.diagnostics[ownerKey] = `${label}: ${message}`;
@@ -83,7 +107,7 @@ function analyzeSequence(
   }
 
   if (segments.length === 1) {
-    const [only] = segments as [Segment];
+    const [only] = segments as [{ text: string } | { expr: Expr; type: ExprType }];
     if ("expr" in only) {
       if (!isAssignable(only.type, expected)) {
         report(`expected ${formatType(expected)}, got ${formatType(only.type)}`);
@@ -107,19 +131,48 @@ function analyzeSequence(
   return { expr: { kind: "concat", parts }, type: "string" };
 }
 
-function analyzeCall(node: CallNode, analysis: Analysis): { expr: Expr; type: ExprType } {
+function analyzeAtom(
+  node: LexicalNode,
+  analysis: Analysis,
+  path: ExprPath,
+): { expr: Expr; type: ExprType } {
+  if ($isVariableNode(node)) {
+    const def = analysis.schema.variables.find((v) => v.path === node.getPath());
+    if (!def) analysis.diagnostics[node.getKey()] = `Unknown variable [${node.getPath()}]`;
+    return { expr: { kind: "variable", path: node.getPath() }, type: def?.type ?? "any" };
+  }
+  if ($isEnumNode(node)) {
+    return node.getEnum() === "boolean"
+      ? { expr: { kind: "boolean", value: node.getValue() === "true" }, type: "boolean" }
+      : {
+          expr: { kind: "enum", enum: node.getEnum(), value: node.getValue() },
+          type: { enum: node.getEnum() },
+        };
+  }
+  if ($isCallNode(node)) return analyzeCall(node, analysis, path);
+  return { expr: { kind: "string", value: node.getTextContent() }, type: "string" };
+}
+
+function analyzeCall(
+  node: CallNode,
+  analysis: Analysis,
+  path: ExprPath,
+): { expr: Expr; type: ExprType } {
   const def = analysis.schema.transformations.find((t) => t.name === node.getName());
   if (!def) analysis.diagnostics[node.getKey()] = `Unknown transformation ${node.getName()}()`;
 
   const args = node.getArgs().map((arg, i) => {
     const param = def?.params[i];
     const label = param ? `${def.name}(${param.name})` : `${node.getName()}(#${i + 1})`;
+    const argPath: ExprPath = [...path, "args", i];
+    if (arg) analysis.locations.set(arg.getKey(), { path: argPath });
     return analyzeSequence(
       arg?.getChildren() ?? [],
       param?.type ?? "any",
       analysis,
       `${node.getKey()}/${i}`,
       label,
+      argPath,
     ).expr;
   });
 

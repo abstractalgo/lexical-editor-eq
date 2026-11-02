@@ -47,3 +47,14 @@ export interface ExpressionResult {
   type: ExprType | null;
   errors: string[];
 }
+
+/** Keys from the root of an `Expr` to one of its nodes, e.g. `["parts", 3, "args", 0]`. */
+export type ExprPath = (string | number)[];
+
+/** Where the caret or selection is, in terms of the `Expr` output. */
+export interface CaretLocation {
+  /** Deepest expression node containing the caret (for a range: containing both ends). */
+  path: ExprPath;
+  /** For a collapsed caret in text: offset into that text segment's source text. */
+  offset?: number;
+}

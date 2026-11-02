@@ -80,7 +80,7 @@ function EnumPill({
       : s.schema.enums.find((e) => e.name === enumName)?.values,
   );
   const error = useEditorStore((s) => s.diagnostics[nodeKey]);
-  const [isSelected] = useLexicalNodeSelection(nodeKey);
+  const [isSelected, setSelected, clearSelection] = useLexicalNodeSelection(nodeKey);
   const options = values?.includes(value) ? values : [value, ...(values ?? [])];
 
   return (
@@ -93,6 +93,11 @@ function EnumPill({
       <select
         aria-label={enumName}
         value={value}
+        // Using the dropdown selects the pill, so the selection reflects it.
+        onFocus={() => {
+          clearSelection();
+          setSelected(true);
+        }}
         onChange={(event) => {
           const next = event.target.value;
           editor.update(() => {
