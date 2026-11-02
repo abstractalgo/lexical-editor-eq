@@ -1,13 +1,13 @@
 .expr-editor {
-  --expr-chip-h: 24px;
+  --expr-chip-h: 20px;
 
   position: relative;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--surface);
   font-family: var(--mono);
-  font-size: 13.5px;
-  line-height: 30px;
+  font-size: 12.5px;
+  line-height: 26px;
   transition: border-color 120ms;
 }
 
@@ -20,8 +20,8 @@
 }
 
 .expr-editor__input {
-  min-height: 44px;
-  padding: 6px 12px;
+  min-height: 32px;
+  padding: 3px 8px;
   outline: none;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -53,8 +53,8 @@
 
 .expr-editor__placeholder {
   position: absolute;
-  top: 7px;
-  left: 13px;
+  top: 4px;
+  left: 9px;
   color: var(--muted-fg);
   pointer-events: none;
   user-select: none;
@@ -76,9 +76,9 @@
   align-items: center;
   height: var(--expr-chip-h);
   margin: 0 1px;
-  padding: 0 7px;
+  padding: 0 5px;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: 5px;
   line-height: 1;
   vertical-align: middle;
   white-space: nowrap;
@@ -145,11 +145,11 @@
   flex-wrap: wrap;
   align-items: center;
   max-width: 100%;
-  min-height: calc(var(--expr-chip-h) + 4px);
+  min-height: calc(var(--expr-chip-h) + 2px);
   margin: 1px 1px;
-  padding: 1px 4px 1px 7px;
+  padding: 0 3px 0 5px;
   border: 1px solid var(--call-border);
-  border-radius: 7px;
+  border-radius: 6px;
   background: var(--call-bg);
   line-height: var(--expr-chip-h);
   transition:
@@ -232,7 +232,7 @@
 }
 
 .expr-call__comma {
-  padding: 0 5px 0 0;
+  padding: 0 4px 0 0;
 }
 
 /*

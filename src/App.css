@@ -31,7 +31,7 @@ kbd {
 
 .bindings {
   display: grid;
-  gap: 14px;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -40,8 +40,8 @@ kbd {
 /* Name, "=", value, remove; the meta line sits under the value. */
 .binding {
   display: grid;
-  grid-template-columns: 11rem auto minmax(0, 1fr) auto;
-  gap: 6px 10px;
+  grid-template-columns: 10rem auto minmax(0, 1fr) auto;
+  gap: 3px 6px;
   align-items: start;
 }
 
@@ -50,14 +50,14 @@ kbd {
 }
 
 .binding__name {
-  height: 44px;
+  height: 34px;
   min-width: 0;
-  padding: 0 12px;
+  padding: 0 8px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--surface);
   color: var(--fg);
-  font: 600 13.5px var(--mono);
+  font: 600 12.5px var(--mono);
   transition: border-color 120ms;
 }
 
@@ -71,7 +71,7 @@ kbd {
 }
 
 .binding__eq {
-  line-height: 44px;
+  line-height: 34px;
   color: var(--muted-fg);
   font-family: var(--mono);
 }
@@ -96,12 +96,13 @@ kbd {
 }
 
 .binding__remove {
-  width: 44px;
-  height: 44px;
+  width: 34px;
+  height: 34px;
   border-color: transparent;
+  border-radius: 6px;
   background: transparent;
   color: var(--muted-fg);
-  font-size: 1.25rem;
+  font-size: 1.05rem;
 }
 
 .binding__remove:hover {
@@ -111,8 +112,9 @@ kbd {
 }
 
 .add {
-  padding: 6px 12px;
-  font-size: 14px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 13px;
   font-weight: 500;
 }
 
