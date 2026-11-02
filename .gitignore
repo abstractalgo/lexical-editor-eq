@@ -9,3 +9,5 @@ dist
 !.yarn/patches
 !.yarn/plugins
 .pnp.*
+.vercel
+.env*
