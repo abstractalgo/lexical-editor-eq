@@ -14,7 +14,9 @@
     "knip": "knip"
   },
   "dependencies": {
+    "@lexical/history": "^0.53.0",
     "@lexical/react": "^0.53.0",
+    "@lexical/rich-text": "^0.53.0",
     "@lexical/utils": "^0.53.0",
     "lexical": "^0.53.0",
     "react": "^19.3.1",

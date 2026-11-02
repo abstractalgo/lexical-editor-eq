@@ -218,7 +218,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@lexical/history@npm:0.53.0":
+"@lexical/history@npm:0.53.0, @lexical/history@npm:^0.53.0":
   version: 0.53.0
   resolution: "@lexical/history@npm:0.53.0"
   dependencies:
@@ -412,7 +412,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@lexical/rich-text@npm:0.53.0":
+"@lexical/rich-text@npm:0.53.0, @lexical/rich-text@npm:^0.53.0":
   version: 0.53.0
   resolution: "@lexical/rich-text@npm:0.53.0"
   dependencies:
@@ -1553,7 +1553,9 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "lexical-editor-eq@workspace:."
   dependencies:
+    "@lexical/history": "npm:^0.53.0"
     "@lexical/react": "npm:^0.53.0"
+    "@lexical/rich-text": "npm:^0.53.0"
     "@lexical/utils": "npm:^0.53.0"
     "@types/node": "npm:^26.6.6"
     "@types/react": "npm:^19.3.0"

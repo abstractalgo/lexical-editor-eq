@@ -1,11 +1,10 @@
-import { LexicalComposer, type InitialConfigType } from "@lexical/react/LexicalComposer";
+import { HistoryExtension } from "@lexical/history";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
-import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
-import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
-import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
+import { LexicalExtensionComposer } from "@lexical/react/LexicalExtensionComposer";
+import { RichTextExtension } from "@lexical/rich-text";
 import { mergeRegister } from "@lexical/utils";
-import type { LexicalEditor, NodeKey } from "lexical";
+import { defineExtension, type LexicalEditor, type NodeKey } from "lexical";
 import { useEffect, useEffectEvent, useState } from "react";
 import { $analyzeEditor, $loadExpression, type NodeLocation } from "./ast.ts";
 import { $caretLocation } from "./caret.ts";
@@ -52,27 +51,30 @@ export function ExpressionEditor({
     store.setState({ schema, resultType });
   }, [store, schema, resultType]);
 
-  const initialConfig: InitialConfigType = {
-    namespace: "expression-editor",
-    nodes: [VariableNode, EnumNode, CallNode, ArgNode],
-    theme: { paragraph: "expr-line" },
-    editorState: () => $loadExpression(initialValue, schema),
-    onError: (error) => {
-      throw error;
-    },
-  };
+  // Created once per editor: a new extension object would re-create the editor.
+  // The initial value and schema are only read here, like `initialValue` promises.
+  const [extension] = useState(() =>
+    defineExtension({
+      name: "expression-editor",
+      namespace: "expression-editor",
+      dependencies: [RichTextExtension, HistoryExtension],
+      nodes: [VariableNode, EnumNode, CallNode, ArgNode],
+      theme: { paragraph: "expr-line" },
+      $initialEditorState: () => $loadExpression(initialValue, schema),
+    }),
+  );
 
   return (
     <EditorStoreContext.Provider value={store}>
-      <LexicalComposer initialConfig={initialConfig}>
+      {/* contentEditable={null}: EditorFrame renders it inside the styled frame. */}
+      <LexicalExtensionComposer extension={extension} contentEditable={null}>
         <EditorFrame placeholder={placeholder} singleLine={singleLine} />
-        <HistoryPlugin />
         <KeyboardPlugin />
         <NavigationPlugin />
         <InsertMenuPlugin />
         <AnalysisPlugin onChange={onChange} onCaretChange={onCaretChange} />
         {singleLine && <HorizontalCaretScrollPlugin />}
-      </LexicalComposer>
+      </LexicalExtensionComposer>
     </EditorStoreContext.Provider>
   );
 }
@@ -86,15 +88,10 @@ function EditorFrame({ placeholder, singleLine }: { placeholder: string; singleL
       data-single-line={singleLine || undefined}
       title={rootError}
     >
-      <RichTextPlugin
-        contentEditable={
-          <ContentEditable
-            className="expr-editor__input"
-            aria-placeholder={placeholder}
-            placeholder={<div className="expr-editor__placeholder">{placeholder}</div>}
-          />
-        }
-        ErrorBoundary={LexicalErrorBoundary}
+      <ContentEditable
+        className="expr-editor__input"
+        aria-placeholder={placeholder}
+        placeholder={<div className="expr-editor__placeholder">{placeholder}</div>}
       />
     </div>
   );
