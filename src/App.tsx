@@ -16,6 +16,8 @@ export function App() {
   const revision = useAppStore((s) => s.revision);
   const addBinding = useAppStore((s) => s.addBinding);
   const reset = useAppStore((s) => s.reset);
+  const singleLine = useAppStore((s) => s.singleLine);
+  const setSingleLine = useAppStore((s) => s.setSingleLine);
 
   return (
     <main className="app">
@@ -37,6 +39,14 @@ export function App() {
         <button type="button" className="add" onClick={addBinding}>
           Add variable
         </button>
+        <label className="toggle">
+          <input
+            type="checkbox"
+            checked={singleLine}
+            onChange={(e) => setSingleLine(e.target.checked)}
+          />
+          Single-line inputs
+        </label>
         <button type="button" className="reset" onClick={reset}>
           Reset to example
         </button>
@@ -92,6 +102,7 @@ function BindingRow({ binding, index }: { binding: Binding; index: number }) {
   const setResult = useAppStore((s) => s.setResult);
   const setCaret = useAppStore((s) => s.setCaret);
   const isActive = useAppStore((s) => s.active?.id === binding.id);
+  const singleLine = useAppStore((s) => s.singleLine);
 
   const schema = useScopedSchema(demoSchema, bindingsInScope(bindings, index, demoSchema));
   const error = nameError(bindings, index, demoSchema);
@@ -114,6 +125,7 @@ function BindingRow({ binding, index }: { binding: Binding; index: number }) {
           <ExpressionEditor
             schema={schema}
             initialValue={binding.initialValue}
+            singleLine={singleLine}
             onChange={(next) => setResult(binding.id, next)}
             onCaretChange={(caret) => setCaret(binding.id, caret)}
           />

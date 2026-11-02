@@ -30,6 +30,11 @@ export interface ExpressionEditorProps {
   /** Called on selection changes while the editor has focus. */
   onCaretChange?: (caret: CaretLocation | null) => void;
   placeholder?: string;
+  /**
+   * Keep the expression on one line and scroll horizontally, instead of
+   * wrapping long content (and long transformations) onto more lines.
+   */
+  singleLine?: boolean;
 }
 
 export function ExpressionEditor({
@@ -39,6 +44,7 @@ export function ExpressionEditor({
   onChange,
   onCaretChange,
   placeholder = "Type text, or @ to insert a variable or transformation",
+  singleLine = false,
 }: ExpressionEditorProps) {
   const [store] = useState(() => createEditorStore(schema, resultType));
 
@@ -59,21 +65,27 @@ export function ExpressionEditor({
   return (
     <EditorStoreContext.Provider value={store}>
       <LexicalComposer initialConfig={initialConfig}>
-        <EditorFrame placeholder={placeholder} />
+        <EditorFrame placeholder={placeholder} singleLine={singleLine} />
         <HistoryPlugin />
         <KeyboardPlugin />
         <NavigationPlugin />
         <InsertMenuPlugin />
         <AnalysisPlugin onChange={onChange} onCaretChange={onCaretChange} />
+        {singleLine && <HorizontalCaretScrollPlugin />}
       </LexicalComposer>
     </EditorStoreContext.Provider>
   );
 }
 
-function EditorFrame({ placeholder }: { placeholder: string }) {
+function EditorFrame({ placeholder, singleLine }: { placeholder: string; singleLine: boolean }) {
   const rootError = useEditorStore((s) => s.diagnostics.root);
   return (
-    <div className="expr-editor" data-error={rootError ? true : undefined} title={rootError}>
+    <div
+      className="expr-editor"
+      data-error={rootError ? true : undefined}
+      data-single-line={singleLine || undefined}
+      title={rootError}
+    >
       <RichTextPlugin
         contentEditable={
           <ContentEditable
@@ -86,6 +98,48 @@ function EditorFrame({ placeholder }: { placeholder: string }) {
       />
     </div>
   );
+}
+
+const CARET_SCROLL_MARGIN = 24;
+
+/**
+ * Single-line mode: after each update, scroll the input horizontally so the
+ * caret stays visible. Lexical only keeps the caret in view vertically.
+ */
+function HorizontalCaretScrollPlugin() {
+  const [editor] = useLexicalComposerContext();
+
+  useEffect(
+    () =>
+      editor.registerUpdateListener(() => {
+        requestAnimationFrame(() => {
+          const root = editor.getRootElement();
+          const selection = window.getSelection();
+          const node = selection?.focusNode;
+          if (!root || !selection || !node || !root.contains(node)) return;
+
+          const range = document.createRange();
+          range.setStart(node, selection.focusOffset);
+          let rect = range.getBoundingClientRect();
+          if (rect.height === 0) {
+            // Collapsed ranges at element boundaries have no box; use the nearest element's.
+            const element = node instanceof Element ? node : node.parentElement;
+            const child = element?.children[selection.focusOffset] ?? element;
+            if (!child) return;
+            rect = child.getBoundingClientRect();
+          }
+          const bounds = root.getBoundingClientRect();
+          if (rect.right > bounds.right - CARET_SCROLL_MARGIN) {
+            root.scrollLeft += rect.right - bounds.right + CARET_SCROLL_MARGIN;
+          } else if (rect.left < bounds.left + CARET_SCROLL_MARGIN) {
+            root.scrollLeft -= bounds.left + CARET_SCROLL_MARGIN - rect.left;
+          }
+        });
+      }),
+    [editor],
+  );
+
+  return null;
 }
 
 /** The editor the user last pressed or focused in, across all editor instances. */

@@ -27,6 +27,30 @@
   overflow-wrap: anywhere;
 }
 
+/* Single line: nothing wraps; the input scrolls horizontally instead. */
+.expr-editor[data-single-line] .expr-editor__input {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+/* Lexical sets `white-space: pre-wrap` inline on the root, so override below it. */
+.expr-editor[data-single-line] .expr-line,
+.expr-editor[data-single-line] .expr-arg {
+  white-space: pre;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.expr-editor[data-single-line] .expr-call {
+  flex-wrap: nowrap;
+  max-width: none;
+}
+
+.expr-editor[data-single-line] .expr-slot {
+  max-width: none;
+}
+
 .expr-editor__placeholder {
   position: absolute;
   top: 7px;

@@ -22,6 +22,9 @@ interface AppState {
   /** Row whose editor last had the caret, and where the caret was (not saved). */
   active: { id: string; caret: CaretLocation } | null;
   setCaret: (id: string, caret: CaretLocation | null) => void;
+  /** Editors keep expressions on one line and scroll instead of wrapping. */
+  singleLine: boolean;
+  setSingleLine: (singleLine: boolean) => void;
   addBinding: () => void;
   removeBinding: (id: string) => void;
   renameBinding: (id: string, name: string) => void;
@@ -29,9 +32,10 @@ interface AppState {
   reset: () => void;
 }
 
-/** What is saved: names and expressions. Types and errors are recomputed on load. */
+/** What is saved: names and expressions, and the layout preference. Types and errors are recomputed on load. */
 interface PersistedState {
   bindings: { id: string; name: string; value: Expr | null }[];
+  singleLine?: boolean;
 }
 
 const STORAGE_KEY = "expression-editor:bindings";
@@ -117,6 +121,8 @@ export const useAppStore = create<AppState>()(
             return s;
           return { active: { id, caret } };
         }),
+      singleLine: false,
+      setSingleLine: (singleLine) => set({ singleLine }),
       addBinding: () =>
         set((s) => ({
           bindings: [...s.bindings, newBinding(`var${s.bindings.length + 1}`, null)],
@@ -143,12 +149,17 @@ export const useAppStore = create<AppState>()(
           name: b.name,
           value: b.result ? b.result.expr : b.initialValue,
         })),
+        singleLine: state.singleLine,
       }),
       merge: (persisted, current) =>
         isPersistedState(persisted)
           ? {
               ...current,
               bindings: persisted.bindings.map((b) => newBinding(b.name, b.value ?? null, b.id)),
+              singleLine:
+                typeof persisted.singleLine === "boolean"
+                  ? persisted.singleLine
+                  : current.singleLine,
             }
           : current,
     },
