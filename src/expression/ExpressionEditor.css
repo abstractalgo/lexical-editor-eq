@@ -8,14 +8,11 @@
   font-family: var(--mono);
   font-size: 13.5px;
   line-height: 30px;
-  transition:
-    border-color 120ms,
-    box-shadow 120ms;
+  transition: border-color 120ms;
 }
 
 .expr-editor:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  border-color: var(--border-focus);
 }
 
 .expr-editor[data-error] {
@@ -96,9 +93,15 @@
   outline: none;
 }
 
-.expr-pill[data-selected],
-.expr-call[data-selected] {
-  box-shadow: 0 0 0 2px var(--accent);
+/* Selected: a stronger fill in the pill's own colour, no ring. */
+.expr-pill--variable[data-selected] {
+  border-color: var(--var-border-selected);
+  background: var(--var-bg-selected);
+}
+
+.expr-pill--enum[data-selected] {
+  border-color: var(--enum-border-selected);
+  background: var(--enum-bg-selected);
 }
 
 .expr-pill[data-error] {
@@ -125,6 +128,9 @@
   border-radius: 7px;
   background: var(--call-bg);
   line-height: var(--expr-chip-h);
+  transition:
+    background-color 120ms,
+    border-color 120ms;
   vertical-align: middle;
 }
 
@@ -140,8 +146,49 @@
   user-select: none;
 }
 
-.expr-call__name:hover {
-  text-decoration: underline;
+/* Hovering the name (which selects the call on click) tints the whole chip. */
+.expr-call:has(> .expr-call__name:hover) {
+  background: var(--call-bg-hover);
+}
+
+/*
+ * Selected (clicked name, Backspace next to it, or covered by a range): a
+ * stronger version of hover. Everything inside takes the selected look too,
+ * since a call is selected whole; nodes in its arguments aren't part of the
+ * outer selection, so this can't come from Lexical.
+ */
+.expr-call[data-selected],
+.expr-call .expr-call[data-selected],
+.expr-call[data-selected] .expr-call {
+  border-color: var(--call-border-selected);
+  background: var(--call-bg-selected);
+}
+
+.expr-call[data-selected] .expr-pill--variable {
+  border-color: var(--var-border-selected);
+  background: var(--var-bg-selected);
+}
+
+.expr-call[data-selected] .expr-pill--enum {
+  border-color: var(--enum-border-selected);
+  background: var(--enum-bg-selected);
+}
+
+/*
+ * Native text highlight: one colour for text, and none on chip chrome or
+ * inside a call that is selected whole (its fill already shows it).
+ */
+.expr-editor ::selection {
+  background: var(--selection-bg);
+}
+
+.expr-call__name::selection,
+.expr-call__paren::selection,
+.expr-call__comma::selection,
+.expr-pill::selection,
+.expr-pill ::selection,
+.expr-call[data-selected] ::selection {
+  background: transparent;
 }
 
 .expr-call[data-error] {

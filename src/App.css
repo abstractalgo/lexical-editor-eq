@@ -58,15 +58,12 @@ kbd {
   background: var(--surface);
   color: var(--fg);
   font: 600 13.5px var(--mono);
-  transition:
-    border-color 120ms,
-    box-shadow 120ms;
+  transition: border-color 120ms;
 }
 
 .binding__name:focus {
-  border-color: var(--accent);
+  border-color: var(--border-focus);
   outline: none;
-  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .binding__name[aria-invalid="true"] {
