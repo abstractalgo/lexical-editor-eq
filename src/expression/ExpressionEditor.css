@@ -1,0 +1,300 @@
+.expr-editor {
+  --expr-chip-h: 24px;
+
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  font-family: var(--mono);
+  font-size: 13.5px;
+  line-height: 30px;
+  transition:
+    border-color 120ms,
+    box-shadow 120ms;
+}
+
+.expr-editor:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.expr-editor[data-error] {
+  border-color: var(--danger);
+}
+
+.expr-editor__input {
+  min-height: 44px;
+  padding: 6px 12px;
+  outline: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.expr-editor__placeholder {
+  position: absolute;
+  top: 7px;
+  left: 13px;
+  color: var(--muted-fg);
+  pointer-events: none;
+  user-select: none;
+}
+
+.expr-line {
+  margin: 0;
+}
+
+/* Host spans Lexical creates for decorators; the chips inside do the styling. */
+.expr-decorator {
+  display: inline;
+}
+
+/* ---------- Pills: variables and enum values ---------- */
+
+.expr-pill {
+  display: inline-flex;
+  align-items: center;
+  height: var(--expr-chip-h);
+  margin: 0 1px;
+  padding: 0 7px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  line-height: 1;
+  vertical-align: middle;
+  white-space: nowrap;
+  cursor: default;
+  user-select: none;
+}
+
+.expr-pill--variable {
+  border-color: var(--var-border);
+  background: var(--var-bg);
+  color: var(--var-fg);
+}
+
+.expr-pill__bracket {
+  opacity: 0.45;
+}
+
+.expr-pill--enum {
+  padding: 0 2px 0 4px;
+  border-color: var(--enum-border);
+  background: var(--enum-bg);
+  color: var(--enum-fg);
+}
+
+.expr-pill--enum select {
+  height: 100%;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.expr-pill--enum select:focus-visible {
+  outline: none;
+}
+
+.expr-pill[data-selected],
+.expr-call[data-selected] {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.expr-pill[data-error] {
+  border-color: var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+/* ---------- Transformation chip: name(arg, arg) ---------- */
+
+/*
+ * One inline-flex box, so the border and background stay whole however tall
+ * the arguments are. Long arguments wrap inside the chip.
+ */
+.expr-call {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  max-width: 100%;
+  min-height: calc(var(--expr-chip-h) + 4px);
+  margin: 1px 1px;
+  padding: 1px 4px 1px 7px;
+  border: 1px solid var(--call-border);
+  border-radius: 7px;
+  background: var(--call-bg);
+  line-height: var(--expr-chip-h);
+  vertical-align: middle;
+}
+
+.expr-call .expr-call {
+  border-color: var(--call-border-nested);
+  background: var(--call-bg-nested);
+}
+
+.expr-call__name {
+  color: var(--call-fg);
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+.expr-call__name:hover {
+  text-decoration: underline;
+}
+
+.expr-call[data-error] {
+  border-color: var(--danger);
+}
+
+.expr-call[data-error] > .expr-call__name {
+  color: var(--danger);
+}
+
+.expr-call__paren,
+.expr-call__comma {
+  padding: 0 1px;
+  color: var(--call-punct);
+  cursor: text;
+  user-select: none;
+}
+
+.expr-call__comma {
+  padding: 0 5px 0 0;
+}
+
+/*
+ * Argument slot. The editable container and, when the argument is empty, the
+ * placeholder share one grid cell, so the placeholder sits inside the
+ * argument where the caret is.
+ */
+.expr-slot {
+  display: inline-grid;
+  min-width: 0;
+  max-width: 100%;
+  cursor: text;
+}
+
+.expr-slot > [data-lexical-slot] {
+  grid-area: 1 / 1;
+  min-width: 0;
+  outline: none;
+}
+
+.expr-arg {
+  min-width: 1ch;
+  min-height: var(--expr-chip-h);
+  padding: 0 1px;
+  border-radius: 4px;
+  transition: background-color 120ms;
+}
+
+/* Highlight only the argument being edited (nested slots are their own focus targets). */
+[data-lexical-slot]:focus > .expr-arg {
+  background: var(--slot-focus);
+}
+
+/* Empty argument: Lexical keeps a lone <br> in it. */
+.expr-slot:has(> [data-lexical-slot] > .expr-arg > br:only-child)::after {
+  content: attr(data-placeholder);
+  grid-area: 1 / 1;
+  align-self: center;
+  height: calc(var(--expr-chip-h) - 2px);
+  padding: 0 5px;
+  border: 1px dashed var(--call-border);
+  border-radius: 4px;
+  color: var(--muted-fg);
+  font-style: italic;
+  line-height: calc(var(--expr-chip-h) - 4px);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Wrong value in a filled argument (empty ones are reported in the error list). */
+.expr-slot[data-error]:not(:has(> [data-lexical-slot] > .expr-arg > br:only-child))
+  > [data-lexical-slot]
+  > .expr-arg {
+  background: var(--danger-soft);
+  text-decoration: wavy underline var(--danger);
+  text-decoration-skip-ink: none;
+  text-underline-offset: 3px;
+}
+
+/* ---------- Insert menu ---------- */
+
+.expr-menu {
+  position: absolute;
+  z-index: 10;
+  width: max-content;
+  min-width: 360px;
+  max-width: min(520px, calc(100vw - 32px));
+  max-height: 320px;
+  margin: 6px 0 0;
+  padding: 4px;
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow:
+    0 1px 2px rgb(16 24 40 / 0.06),
+    0 12px 32px rgb(16 24 40 / 0.14);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.expr-menu__item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.expr-menu__item[aria-selected="true"] {
+  background: var(--accent-soft);
+}
+
+.expr-menu__item[data-incompatible] {
+  opacity: 0.45;
+}
+
+.expr-menu__group {
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4rem;
+  text-align: center;
+}
+
+.expr-menu__group[data-group="Values"] {
+  background: var(--enum-bg);
+  color: var(--enum-fg);
+}
+
+.expr-menu__group[data-group="Variables"] {
+  background: var(--var-bg);
+  color: var(--var-fg);
+}
+
+.expr-menu__group[data-group="Transformations"] {
+  background: var(--call-bg-nested);
+  color: var(--call-fg);
+}
+
+.expr-menu__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.expr-menu__detail {
+  color: var(--muted-fg);
+  font-size: 12px;
+}
